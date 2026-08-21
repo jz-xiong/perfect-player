@@ -2952,6 +2952,11 @@ function updateSlotButtons() {
         style="background:var(--orange);color:#fff;${canSpin ? '' : 'opacity:0.3;'}">
         🎲 随机球队
       </button>
+      <button class="btn btn-sm slot-btn" onclick="openBuildTeamPicker()"
+        ${canSpin ? '' : 'disabled'}
+        style="background:#1e3a5f;color:#fff;${canSpin ? '' : 'opacity:0.3;'}">
+        🎯 自选球队
+      </button>
       ${getRerollButtonHtml()}
     `;
   }
@@ -2978,6 +2983,11 @@ function buildSlotHTML(itemsHtml) {
           ${canSpin ? '' : 'disabled'}
           style="background:var(--orange);color:#fff;${canSpin ? '' : 'opacity:0.3;'}">
           🎲 随机球队
+        </button>
+        <button class="btn btn-sm slot-btn" onclick="openBuildTeamPicker()"
+          ${canSpin ? '' : 'disabled'}
+          style="background:#1e3a5f;color:#fff;${canSpin ? '' : 'opacity:0.3;'}">
+          🎯 自选球队
         </button>
         ${getRerollButtonHtml()}
       </div>
@@ -3071,6 +3081,57 @@ function spinSlotMachine() {
     STATE._mustLockAfterSpin = true;
     _slotSpinning = false;
     
+    renderLeftAttrs();
+    updateSlotButtons();
+    showTeamRoster(targetTeam);
+  }, 2800);
+}
+
+function spinSlotMachineTo(targetTeam) {
+  if (_slotSpinning) return;
+  _slotSpinning = true;
+  const reel = document.getElementById('slot-reel');
+  if (!reel) { _slotSpinning = false; return; }
+  const sorted = [...NBA2K_TEAMS].sort();
+  const teamCount = sorted.length;
+  const itemH = 38;
+  const copyLen = teamCount * itemH;
+  const targetIdx = Math.max(0, sorted.indexOf(targetTeam));
+  const snapIdx = (targetIdx - 1 + teamCount) % teamCount;
+  const targetY = copyLen * 2 + snapIdx * itemH;
+  const curMatch = reel.style.transform.match(/([\d.]+)/);
+  const curY = curMatch ? parseFloat(curMatch[0]) : copyLen;
+  let finalY = targetY;
+  const minSpin = copyLen * 0.5;
+  while (finalY <= curY + minSpin) finalY += copyLen;
+  const maxY = copyLen * 4 - itemH * 2;
+  if (finalY > maxY) {
+    reel.style.transition = 'none';
+    reel.style.transform = `translateY(-${copyLen}px)`;
+    void reel.offsetHeight;
+    reel.style.transition = '';
+    finalY = targetY + copyLen;
+  }
+  reel.classList.add('spinning');
+  reel.style.transform = `translateY(-${finalY}px)`;
+  setTimeout(() => {
+    reel.classList.remove('spinning');
+    const exactY = copyLen * 3 + snapIdx * itemH;
+    reel.style.transition = 'none';
+    reel.style.transform = `translateY(-${exactY}px)`;
+    void reel.offsetHeight;
+    reel.style.transition = '';
+    var middleIdx = teamCount * 3 + snapIdx + 1;
+    highlightSlotItem('slot-reel', middleIdx);
+    STATE.currentTeam = targetTeam;
+    if (STATE._teamsVisited.indexOf(targetTeam) === -1) {
+      STATE._teamsVisited.push(targetTeam);
+      console.log('[Build] 已访问球队:', STATE._teamsVisited.join(', '));
+    }
+    STATE.selectedPlayer = null;
+    STATE._shownThisTeam = [];
+    STATE._mustLockAfterSpin = true;
+    _slotSpinning = false;
     renderLeftAttrs();
     updateSlotButtons();
     showTeamRoster(targetTeam);
@@ -4258,6 +4319,54 @@ function selectCareerTeam(team) {
     STATE._draftSelfPick = false;
     renderCareerTeamReveal(team, cnName, role, rosterHtml);
   }
+}
+
+// ==================== 建球员自选球队 ====================
+function openBuildTeamPicker() {
+  if (STATE._mustLockAfterSpin || _slotSpinning) return;
+  var old = document.getElementById('build-team-picker-overlay');
+  if (old) old.remove();
+  var gridHtml = '';
+  [...NBA2K_TEAMS].sort().forEach(function(t) {
+    var cn = SIM_CONFIG.TEAM_NAMES[t] || t;
+    var city = window.TEAM_CITY[t] || '';
+    var logo = getTeamLogo(t, 36);
+    gridHtml += '<div class="team-pick-card" data-team="' + t + '" onclick="selectBuildTeam(\'' + t + '\')">' +
+      logo +
+      '<span class="tpc-abbr">' + cn + '</span>'
+      + '<span class="tpc-name">' + city + '</span>'
+      + '</div>';
+  });
+  var overlay = document.createElement('div');
+  overlay.className = 'team-picker-overlay';
+  overlay.id = 'build-team-picker-overlay';
+  overlay.innerHTML =
+    '<div class="team-picker-modal">' +
+      '<div class="team-picker-header">' +
+        '<span>🎯 自选球队</span>' +
+        '<button class="team-picker-close" onclick="closeBuildTeamPicker()">✕</button>' +
+      '</div>' +
+      '<div class="team-picker-header" style="border-bottom:none;padding:4px 14px 8px;justify-content:center;">' +
+        '<span style="font-size:11px;color:var(--text-dim);font-weight:400;">全 30 队任选 · 选定后开始抽取该队球员</span>' +
+      '</div>' +
+      '<div class="team-picker-grid">' + gridHtml + '</div>'
+      + '</div>';
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) closeBuildTeamPicker();
+  });
+  document.body.appendChild(overlay);
+}
+
+function closeBuildTeamPicker() {
+  var el = document.getElementById('build-team-picker-overlay');
+  if (el) el.remove();
+}
+
+function selectBuildTeam(team) {
+  trackEvent({act:"click",blk:"BMC098",pos:"TC3",label:"自选球队-建球员"});
+  closeBuildTeamPicker();
+  if (STATE._mustLockAfterSpin || _slotSpinning) return;
+  spinSlotMachineTo(team);
 }
 
 // ==================== 5.5 自选球队弹窗 ====================
