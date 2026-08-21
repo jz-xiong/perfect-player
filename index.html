@@ -2294,7 +2294,7 @@ const STATE = {
   currentTeam: null,    // 'LAL'
   currentRoster: [],    // 该队球员列表
   _shownThisTeam: [],   // 当前球队已展示过的球员名
-  _rerollsLeft: 3,    // 全局还可换球员次数（整个建球员阶段共3次，不重置）
+  _rerollsLeft: 9999,    // 全局还可换球员次数（整个建球员阶段共9999次，实际等同无限）
   _mockAdRerollsLeft: 3, // 暂代广告奖励：最多看3次，每次直接换一批
   _teamsVisited: [],  // 抽到过的球队列表
   _drawPlayers: [],   // 当前这一轮展示的5名球员（同轮不重复）
@@ -2574,7 +2574,7 @@ function initGame() {
     usedPlayers: [], _mustLockAfterSpin: false,
     buildStep: 'select', noPlayerSelected: true,
     currentTeam: null, currentRoster: [],
-    _shownThisTeam: [], _rerollsLeft: 3, _mockAdRerollsLeft: 3, _teamsVisited: [], _drawPlayers: [],
+    _shownThisTeam: [], _rerollsLeft: 9999, _mockAdRerollsLeft: 9999, _teamsVisited: [], _drawPlayers: [],
     selectedPlayer: null, _locking: false,
     finalOVR: 0, finalPosition: null, finalArchetype: null,
     careerTeam: null,
@@ -2920,11 +2920,11 @@ function getRerollButtonHtml() {
     // 计数器有次数 → 展示正常文案（未选队时禁用）
     return '<button class="btn btn-sm slot-btn" onclick="rerollTeamPlayers()"' +
       (hasTeam ? '' : ' disabled style="opacity:0.3;"') +
-      '>👥 更换球员 (' + STATE._rerollsLeft + ')</button>';
+      '>👥 更换球员 (' + (STATE._rerollsLeft >= 9999 ? '∞' : STATE._rerollsLeft) + ')</button>';
   }
   var loading = !!window._adRerollLoading;
   var canClick = hasTeam && !loading;
-  var adLeft = Math.max(0, Number(STATE._mockAdRerollsLeft == null ? 3 : STATE._mockAdRerollsLeft));
+  var adLeft = Math.max(0, Number(STATE._mockAdRerollsLeft == null ? 9999 : STATE._mockAdRerollsLeft));
   if (adLeft <= 0) {
     return '<button class="btn btn-sm slot-btn" disabled style="opacity:0.3;background:#222;color:var(--text-dim);">📺 广告重选已用完</button>';
   }
@@ -14785,7 +14785,7 @@ function manualLoadGame(slot) {
         Object.keys(STATE).forEach(function(k) { delete STATE[k]; });
         Object.assign(STATE, snap.state);
         // 旧存档没有模拟广告计数和当前抽取快照时，按新规则补齐默认值。
-        if (STATE._mockAdRerollsLeft == null) STATE._mockAdRerollsLeft = 3;
+        if (STATE._mockAdRerollsLeft == null) STATE._mockAdRerollsLeft = 9999;
         if (!Array.isArray(STATE._drawPlayers)) STATE._drawPlayers = [];
         if (STATE.season && STATE.season._processedDays && !(STATE.season._processedDays instanceof Set)) {
           STATE.season._processedDays = new Set((Array.isArray(STATE.season._processedDays) ? STATE.season._processedDays : []).map(Number));
@@ -23936,7 +23936,7 @@ var _adRerollLoading = false;      // 换人广告防连点
 async function watchAdToReroll() {
   if (_adRerollLoading) return;
   if (!STATE.currentTeam) return;
-  var adLeft = Math.max(0, Number(STATE._mockAdRerollsLeft == null ? 3 : STATE._mockAdRerollsLeft));
+  var adLeft = Math.max(0, Number(STATE._mockAdRerollsLeft == null ? 9999 : STATE._mockAdRerollsLeft));
   if (adLeft <= 0) {
     showAdToast('模拟广告次数已用完');
     updateSlotButtons();
