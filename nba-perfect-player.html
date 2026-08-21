@@ -15209,7 +15209,7 @@ function calcTrainingPoints() {
   if (awardLabels.indexOf('总决赛MVP') >= 0) personalPts++;
   if (awardLabels.indexOf('最佳新秀') >= 0) personalPts++;
 
-  return Math.max(pts, personalPts) || 1;
+  return 9999; // 无限制加点
 }
 
 function renderTrainingCamp() {
@@ -15916,7 +15916,7 @@ function renderTrainingAttrs(tp) {
     var afterGrade = getGrade ? getGrade(after).letter : '';
     var gradeChanged = curGrade !== afterGrade ? '<span style="color:var(--gold);font-weight:700;">' + curGrade + '→' + afterGrade + '</span>' : curGrade;
     var cost = getPointCost(cur + added);
-    var disabled = added >= 8 || remaining < cost || cur >= 99;
+    var disabled = added >= 99 || remaining < cost || cur >= 99;
     var costLabel = cost > 1 ? ' (×' + cost + ')' : '';
     var btnLabel = remaining >= cost && after < 99 ? '+' : '';
 
@@ -15961,7 +15961,7 @@ function getMaxAdd(alreadyAdded, totalPoints, curVal) {
   if (remaining <= 0) return 0;
   var possible = 0;
   var value = curVal + alreadyAdded;
-  while (possible + alreadyAdded < 8 && value < 99) {
+  while (possible + alreadyAdded < 99 && value < 99) {
     var cost = getPointCost(value);
     if (remaining < cost) break;
     remaining -= cost;
@@ -15975,7 +15975,7 @@ function addTrainingPoint(key) {
   if (!STATE._tpPending) STATE._tpPending = {};
   var added = STATE._tpPending[key] || 0;
   var cur = STATE.attrs[key] || 50;
-  if (added >= 8) return;
+  if (added >= 99) return;
   var tp = calcTrainingPoints();
   var used = getPendingTrainingCost(STATE._tpPending);
   var remaining = tp - used;
